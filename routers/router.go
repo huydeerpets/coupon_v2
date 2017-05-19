@@ -16,5 +16,5 @@ func init() {
 	beego.Router("/coupons/get", &ctl.CouponsController{}, "get:GetAll")
 	beego.Router("/coupons/edit/:id", &ctl.CouponsController{}, "put:Put")
 	beego.Router("/coupons/new", &ctl.CouponsController{}, "post:Post")
-	beego.Router("/coupons/delete", &ctl.CouponsController{}, "delete:Delete")
+	beego.Router("/coupons/delete/:id", &ctl.CouponsController{}, "delete:Delete")
 }

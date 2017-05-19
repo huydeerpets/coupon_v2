@@ -24,16 +24,12 @@ func (c *CouponsController) URLMapping() {
 	c.Mapping("Delete", c.Delete)
 }
 
-//Prepare when access here
-func (c *CouponsController) Prepare() {
+//ValidRole when access here
+func (c *CouponsController) ValidRole() bool {
 	if c.Role >= lib.ROLE_NORMAL {
-		c.Data["json"] = lib.Response{
-			Error:       lib.ResponseUserFailPermission,
-			Description: lib.ResponseUserFailPermission.String(),
-		}
-		c.ServeJSON()
-		return
+		return true
 	}
+	return false
 }
 
 // Post ...
@@ -44,6 +40,14 @@ func (c *CouponsController) Prepare() {
 // @Failure 403 body is empty
 // @router / [post]
 func (c *CouponsController) Post() {
+	if !c.ValidRole() {
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseTokenFail,
+			Description: lib.ResponseTokenFail.String(),
+		}
+		c.ServeJSON()
+		return
+	}
 	var v models.Coupon
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err == nil {
 		if _, err := models.AddCoupon(&v); err == nil {
@@ -64,6 +68,14 @@ func (c *CouponsController) Post() {
 // @Success 200 {object} code
 // @router /generatecode [get]
 func (c *CouponsController) GenerateCode() {
+	if !c.ValidRole() {
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseTokenFail,
+			Description: lib.ResponseTokenFail.String(),
+		}
+		c.ServeJSON()
+		return
+	}
 	data := make(map[string]interface{})
 	code := lib.GenerateCode(6)
 	data["code"] = code
@@ -76,13 +88,20 @@ func (c *CouponsController) GenerateCode() {
 
 }
 
-
 //ChargeCoupon ...
 // @Title ChargeCoupon
 // @Description generate code
 // @Success 200 {object} code
 // @router /charge [post]
 func (c *CouponsController) ChargeCoupon() {
+	if !c.ValidRole() {
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseTokenFail,
+			Description: lib.ResponseTokenFail.String(),
+		}
+		c.ServeJSON()
+		return
+	}
 	data := make(map[string]interface{})
 	code := lib.GenerateCode(6)
 	data["code"] = code
@@ -103,13 +122,28 @@ func (c *CouponsController) ChargeCoupon() {
 // @Failure 403 :id is empty
 // @router /:id [get]
 func (c *CouponsController) GetOne() {
+	if !c.ValidRole() {
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseTokenFail,
+			Description: lib.ResponseTokenFail.String(),
+		}
+		c.ServeJSON()
+		return
+	}
 	idStr := c.Ctx.Input.Param(":id")
 	id, _ := strconv.Atoi(idStr)
 	v, err := models.GetCouponsByID(id)
 	if err != nil {
-		c.Data["json"] = err.Error()
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseDatabaseNotFoundCoupon,
+			Description: lib.ResponseDatabaseNotFoundCoupon.String(),
+		}
 	} else {
-		c.Data["json"] = v
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseOK,
+			Description: lib.ResponseOK.String(),
+			Data: v,
+		}
 	}
 	c.ServeJSON()
 }
@@ -127,6 +161,14 @@ func (c *CouponsController) GetOne() {
 // @Failure 403
 // @router / [get]
 func (c *CouponsController) GetAll() {
+	if !c.ValidRole() {
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseTokenFail,
+			Description: lib.ResponseTokenFail.String(),
+		}
+		c.ServeJSON()
+		return
+	}
 	var fields []string
 	var sortby []string
 	var order []string
@@ -170,9 +212,16 @@ func (c *CouponsController) GetAll() {
 
 	l, err := models.GetAllCoupons(query, fields, sortby, order, offset, limit)
 	if err != nil {
-		c.Data["json"] = err.Error()
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseDatabaseNotFoundCoupon,
+			Description: lib.ResponseDatabaseNotFoundCoupon.String(),
+		}
 	} else {
-		c.Data["json"] = l
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseOK,
+			Description: lib.ResponseOK.String(),
+			Data: l,
+		}
 	}
 	c.ServeJSON()
 }
@@ -186,18 +235,40 @@ func (c *CouponsController) GetAll() {
 // @Failure 403 :id is not int
 // @router /:id [put]
 func (c *CouponsController) Put() {
-	idStr := c.Ctx.Input.Param(":id")
-	id, _ := strconv.Atoi(idStr)
-	v := models.Coupon{ID: id}
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err == nil {
-		if err := models.UpdateCouponsByID(&v); err == nil {
-			c.Data["json"] = "OK"
-		} else {
-			c.Data["json"] = err.Error()
+	if !c.ValidRole() {
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseTokenFail,
+			Description: lib.ResponseTokenFail.String(),
 		}
-	} else {
-		c.Data["json"] = err.Error()
+		c.ServeJSON()
+		return
 	}
+	cp := models.Coupon{}
+	err := json.Unmarshal(c.Ctx.Input.RequestBody, &cp)
+	if err != nil {
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseJSONParseFail,
+			Description: lib.ResponseJSONParseFail.String(),
+		}
+		c.ServeJSON()
+		return
+	}
+	err = cp.Read("code")
+	if err.Error() == "<QuerySeter> no row found" || err != nil {
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseDatabaseNotFoundCoupon,
+			Description: lib.ResponseDatabaseNotFoundCoupon.String(),
+		}
+		c.ServeJSON()
+		return
+	}
+	v := models.Coupon{Code: cp.Code}
+
+	//check fields
+	if cp.Amount != 0 {
+		v.Amount = cp.Amount
+	}
+	if cp.ValidFrom == 
 	c.ServeJSON()
 }
 
@@ -209,12 +280,26 @@ func (c *CouponsController) Put() {
 // @Failure 403 id is empty
 // @router /:id [delete]
 func (c *CouponsController) Delete() {
+	if !c.ValidRole() {
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseTokenFail,
+			Description: lib.ResponseTokenFail.String(),
+		}
+		c.ServeJSON()
+		return
+	}
 	idStr := c.Ctx.Input.Param(":id")
 	id, _ := strconv.Atoi(idStr)
 	if err := models.DeleteCoupons(id); err == nil {
-		c.Data["json"] = "OK"
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseOK,
+			Description: lib.ResponseOK.String(),
+		}
 	} else {
-		c.Data["json"] = err.Error()
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseDatabaseErrorCoupon,
+			Description: lib.ResponseDatabaseErrorCoupon.String(),
+		}
 	}
 	c.ServeJSON()
 }

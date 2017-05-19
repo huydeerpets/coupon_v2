@@ -10,10 +10,10 @@ import (
 //GenerateToken from profile of user
 func GenerateToken(email string) (string, error) {
 	// Create JWT token
-
+	duration, _ := beego.AppConfig.Int64("token_expired_duration")
 	claims := jwt.StandardClaims{
 		Audience:  email,
-		ExpiresAt: time.Now().Unix() + int64(time.Duration(time.Second*600)),
+		ExpiresAt: time.Now().Unix() + duration,
 		Issuer:    "kowon",
 		Subject:   "kowon API",
 	}

@@ -33,7 +33,16 @@ func keyFn(token *jwt.Token) (interface{}, error) {
 
 //CheckToken check token
 func (b *BaseController) CheckToken() {
-	email, err := lib.ParseToken(b.Ctx.Request.Header.Get("Authorization"))
+	token := b.Ctx.Request.Header.Get("Authorization")
+	if token == "" {
+		b.Data["json"] = lib.Response{
+			Error:       lib.ResponseTokenFail,
+			Description: lib.ResponseTokenFail.String(),
+		}
+		b.ServeJSON()
+		return
+	}
+	email, err := lib.ParseToken(token)
 	if err != nil {
 		beego.Info("token inValid", err)
 		b.Data["json"] = lib.Response{
@@ -41,6 +50,7 @@ func (b *BaseController) CheckToken() {
 			Description: lib.ResponseTokenFail.String(),
 		}
 		b.ServeJSON()
+		return
 	}
 	beego.Info(email)
 	user := &models.User{Email: email}
