@@ -6,73 +6,75 @@ import (
 	"reflect"
 	"strings"
 	"time"
-	"github.com/astaxie/beego/orm"
 	"github.com/astaxie/beego"
-
+	"github.com/astaxie/beego/orm"
 )
 
-
-//Coupons table
-type Coupons struct {
-	ID                     int	     `orm:"column(id);auto" json:"-"`
+//Coupon table
+type Coupon struct {
+	ID                     int       `orm:"column(id);auto" json:"-"`
 	Code                   string    `orm:"column(code);size(10)" json:"code" valid:"Required;AlphaNumeric;MinSize(6)"`
 	Description            string    `orm:"column(description);size(255);null" json:"description"`
-	ValidFrom              time.Time `orm:"column(valid_from);type(date)" json:"valid_from" valid:"Length(10)"`
+	ValidFrom              time.Time `orm:"column(valid_from);type(date)" json:"valid_from" valid:"Required"`
 	ValidUntil             time.Time `orm:"column(valid_until);type(date);null" json:"valid_until" valid:"Length(10)"`
 	RedemptionLimit        int       `orm:"column(redemption_limit);default(1)" json:"redemption_limit"`
 	CouponRedemptionsCount int       `orm:"column(coupon_redemptions_count);default(0)" json:"-"`
-	Amount                 int       `orm:"column(amount);default(0)" json:"amount"`
+	Amount                 int       `orm:"column(amount);default(0)" json:"amount" valid:"Required"`
 	Type                   int       `orm:"column(type);default(0)" json:"type"`
 	Username               string    `orm:"column(username);size(64);default('')" json:"username"`
-	Categories             string    `orm:"column(categories);size(255);default('')" json:"categories"`
-	Products               string    `orm:"column(products);size(255);default('')" json:"products"`
+	Categories             string    `orm:"column(categories);type(vachar);size(255);default('')" json:"categories"`
+	Products               string    `orm:"column(products);type(vachar);size(255);default('')" json:"products"`
 	Status                 int       `orm:"column(status);default(1)" json:"status"`
 	CreatedAt              time.Time `orm:"column(created_at);type(timestamp);auto_now_add" json:"-"`
-	UpdatedAt              time.Time `orm:"column(updated_at);type(timestamp)" json:"-"`
+	UpdatedAt              time.Time `orm:"column(updated_at);type(timestamp);auto_now" json:"-"`
 }
 
-
 //TableName set table name
-func (c *Coupons) TableName() string {
+func (c *Coupon) TableName() string {
 	return "coupons"
 }
 
-// AddCoupons insert a new Coupons into database and returns
+// AddCoupon insert a new Coupons into database and returns
 // last inserted Id on success.
-func AddCoupons(m *Coupons) (id int64, err error) {
+func AddCoupon(m *Coupon) (id int64, err error) {
 	o := orm.NewOrm()
 	id, err = o.Insert(m)
 	return
 }
 
+//Insert coupons
+func (c *Coupon) Insert() error {
+	if _, err := orm.NewOrm().Insert(c); err != nil {
+		return err
+	}
+	return nil
+}
 
 //Read query user table by fields
-func (c *Coupons) Read(fields ...string) error {
+func (c *Coupon) Read(fields ...string) error {
 	if err := orm.NewOrm().Read(c, fields...); err != nil {
 		return err
 	}
 	return nil
 }
 
-
 // GetCouponsByID retrieves Coupons by Id. Returns error if
 // Id doesn't exist
-func GetCouponsByID(id int) (v *Coupons, err error) {
+func GetCouponsByID(id int) (v *Coupon, err error) {
 	o := orm.NewOrm()
-	v = &Coupons{ID: id}
+	v = &Coupon{ID: id}
 	if err = o.Read(v); err == nil {
 		return v, nil
 	}
 	return nil, err
 }
 
-
 // GetAllCoupons retrieves all Coupons matches certain condition. Returns empty list if
 // no records exist
 func GetAllCoupons(query map[string]string, fields []string, sortby []string, order []string,
 	offset int64, limit int64) (ml []interface{}, err error) {
 	o := orm.NewOrm()
-	qs := o.QueryTable(new(Coupons))
+	qs := o.QueryTable(new(Coupon))
 	// query k=v
 	for k, v := range query {
 		// rewrite dot-notation to Object__Attribute
@@ -122,7 +124,7 @@ func GetAllCoupons(query map[string]string, fields []string, sortby []string, or
 		}
 	}
 
-	var l []Coupons
+	var l []Coupon
 	qs = qs.OrderBy(sortFields...)
 	if _, err = qs.Limit(limit, offset).All(&l, fields...); err == nil {
 		if len(fields) == 0 {
@@ -145,21 +147,19 @@ func GetAllCoupons(query map[string]string, fields []string, sortby []string, or
 	return nil, err
 }
 
-
 //Update update user when modify something
-func (c *Coupons) Update(fields ...string) error {
+func (c *Coupon) Update(fields ...string) error {
 	if _, err := orm.NewOrm().Update(c, fields...); err != nil {
 		return err
 	}
 	return nil
 }
 
-
 // UpdateCouponsByID updates Coupons by Id and returns error if
 // the record to be updated doesn't exist
-func UpdateCouponsByID(m *Coupons) (err error) {
+func UpdateCouponsByID(m *Coupon) (err error) {
 	o := orm.NewOrm()
-	v := Coupons{ID: m.ID}
+	v := Coupon{ID: m.ID}
 	// ascertain id exists in the database
 	if err = o.Read(&v); err == nil {
 		var num int64
@@ -170,25 +170,23 @@ func UpdateCouponsByID(m *Coupons) (err error) {
 	return
 }
 
-
 //Delete delete user with conditition
-func (c *Coupons) Delete(field ...string) error {
+func (c *Coupon) Delete(field ...string) error {
 	if _, err := orm.NewOrm().Delete(c, field...); err != nil {
 		return err
 	}
 	return nil
 }
 
-
 // DeleteCoupons deletes Coupons by Id and returns error if
 // the record to be deleted doesn't exist
 func DeleteCoupons(id int) (err error) {
 	o := orm.NewOrm()
-	v := Coupons{ID: id}
+	v := Coupon{ID: id}
 	// ascertain id exists in the database
 	if err = o.Read(&v); err == nil {
 		var num int64
-		if num, err = o.Delete(&Coupons{ID: id}); err == nil {
+		if num, err = o.Delete(&Coupon{ID: id}); err == nil {
 			fmt.Println("Number of records deleted in database:", num)
 		}
 	}
@@ -196,14 +194,13 @@ func DeleteCoupons(id int) (err error) {
 }
 
 //Coupon seter query when query
-func Coupon() orm.QuerySeter {
-	var table Coupons
+func Coupons() orm.QuerySeter {
+	var table Coupon
 	return orm.NewOrm().QueryTable(table).OrderBy("-Id")
 }
-
 
 func init() {
 	orm.RegisterModelWithPrefix(
 		beego.AppConfig.String("dbprefix"),
-		new(Coupons))
+		new(Coupon))
 }

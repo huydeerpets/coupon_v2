@@ -39,10 +39,10 @@ func GenerateCode(length int) string {
 	for {
 		code := utils.GetRandomString(length)
 		beego.Info(code)
-		cp := models.Coupons{
+		cp := models.Coupon{
 			Code: code,
 		}
-		if models.Coupon().Filter("code", cp.Code).Exist() {
+		if models.Coupons().Filter("code", cp.Code).Exist() {
 			continue
 		}
 		return code

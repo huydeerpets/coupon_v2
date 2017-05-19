@@ -13,7 +13,7 @@ func GenerateToken(email string) (string, error) {
 
 	claims := jwt.StandardClaims{
 		Audience:  email,
-		ExpiresAt: time.Now().Unix() + int64(time.Duration(time.Second*24*3600)),
+		ExpiresAt: time.Now().Unix() + int64(time.Duration(time.Second*600)),
 		Issuer:    "kowon",
 		Subject:   "kowon API",
 	}

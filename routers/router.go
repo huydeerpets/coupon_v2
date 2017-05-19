@@ -11,4 +11,10 @@ func init() {
 
 	//coupons manager
 	beego.Router("/coupons/generatecode", &ctl.CouponsController{}, "get:GenerateCode")
+	beego.Router("/coupons/charge", &ctl.CouponsController{}, "post:ChargeCoupon")
+	beego.Router("/coupons/get/:id", &ctl.CouponsController{}, "get:GetOne")
+	beego.Router("/coupons/get", &ctl.CouponsController{}, "get:GetAll")
+	beego.Router("/coupons/edit/:id", &ctl.CouponsController{}, "put:Put")
+	beego.Router("/coupons/new", &ctl.CouponsController{}, "post:Post")
+	beego.Router("/coupons/delete", &ctl.CouponsController{}, "delete:Delete")
 }

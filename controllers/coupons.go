@@ -15,7 +15,6 @@ type CouponsController struct {
 	BaseController
 }
 
-
 // URLMapping ...
 func (c *CouponsController) URLMapping() {
 	c.Mapping("Post", c.Post)
@@ -23,6 +22,18 @@ func (c *CouponsController) URLMapping() {
 	c.Mapping("GetAll", c.GetAll)
 	c.Mapping("Put", c.Put)
 	c.Mapping("Delete", c.Delete)
+}
+
+//Prepare when access here
+func (c *CouponsController) Prepare() {
+	if c.Role >= lib.ROLE_NORMAL {
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseUserFailPermission,
+			Description: lib.ResponseUserFailPermission.String(),
+		}
+		c.ServeJSON()
+		return
+	}
 }
 
 // Post ...
@@ -33,9 +44,9 @@ func (c *CouponsController) URLMapping() {
 // @Failure 403 body is empty
 // @router / [post]
 func (c *CouponsController) Post() {
-	var v models.Coupons
+	var v models.Coupon
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err == nil {
-		if _, err := models.AddCoupons(&v); err == nil {
+		if _, err := models.AddCoupon(&v); err == nil {
 			c.Ctx.Output.SetStatus(201)
 			c.Data["json"] = v
 		} else {
@@ -53,21 +64,32 @@ func (c *CouponsController) Post() {
 // @Success 200 {object} code
 // @router /generatecode [get]
 func (c *CouponsController) GenerateCode() {
-	if c.Role != lib.ROLE_ADMIN {
-		c.Data["json"] = lib.Response{
-		Error:       lib.ResponseUserFailPermission,
-		Description: lib.ResponseUserFailPermission.String(),
-		}
-		c.ServeJSON()
-		return
-	}
 	data := make(map[string]interface{})
 	code := lib.GenerateCode(6)
 	data["code"] = code
 	c.Data["json"] = lib.Response{
 		Error:       lib.ResponseOK,
 		Description: lib.ResponseOK.String(),
-		Data: data,
+		Data:        data,
+	}
+	c.ServeJSON()
+
+}
+
+
+//ChargeCoupon ...
+// @Title ChargeCoupon
+// @Description generate code
+// @Success 200 {object} code
+// @router /charge [post]
+func (c *CouponsController) ChargeCoupon() {
+	data := make(map[string]interface{})
+	code := lib.GenerateCode(6)
+	data["code"] = code
+	c.Data["json"] = lib.Response{
+		Error:       lib.ResponseOK,
+		Description: lib.ResponseOK.String(),
+		Data:        data,
 	}
 	c.ServeJSON()
 
@@ -166,7 +188,7 @@ func (c *CouponsController) GetAll() {
 func (c *CouponsController) Put() {
 	idStr := c.Ctx.Input.Param(":id")
 	id, _ := strconv.Atoi(idStr)
-	v := models.Coupons{ID: id}
+	v := models.Coupon{ID: id}
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err == nil {
 		if err := models.UpdateCouponsByID(&v); err == nil {
 			c.Data["json"] = "OK"
