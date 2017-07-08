@@ -7,6 +7,8 @@ import (
 	"strings"
 	"ttc/cps/lib"
 	"ttc/cps/models"
+	"ttc/cps/utils"
+	log "ttc/utilities/logging"
 	// "github.com/astaxie/beego"
 )
 
@@ -14,6 +16,10 @@ import (
 type CouponsController struct {
 	BaseController
 }
+
+const (
+	activeSTATUS = 1
+)
 
 // URLMapping ...
 func (c *CouponsController) URLMapping() {
@@ -102,15 +108,99 @@ func (c *CouponsController) ChargeCoupon() {
 		c.ServeJSON()
 		return
 	}
+
 	//TODO: check json code
+	cp := models.Coupon{}
+	err := json.Unmarshal(c.Ctx.Input.RequestBody, &cp)
+	if err != nil {
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseJSONParseFail,
+			Description: lib.ResponseJSONParseFail.String(),
+		}
+		c.ServeJSON()
+		return
+	}
+	log.Info("%+v", cp)
 	//TODO: check code exist in Database
+	// cpdb := models.Coupon{}
+	cpdb, err := models.GetCouponsByCode(cp.Code)
+	if err != nil {
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseCodeInvalid,
+			Description: lib.ResponseCodeInvalid.String(),
+		}
+		c.ServeJSON()
+		return
+	}
+	log.Info("cp from db %+v", cpdb)
 	//TODO: check valid count limit
-	//TODO: check valid status
-	//TODO: check valid username
-	//TODO: check valid categories
-	//TODO: check valid products
+	if cpdb.RedemptionLimit < cpdb.CouponRedemptionsCount && cpdb.CouponRedemptionsCount > 0 {
+		log.Info("coupon da het so lan su dung")
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseCodeInvalid,
+			Description: lib.ResponseCodeInvalid.String(),
+		}
+		c.ServeJSON()
+		return
+	}
 	//TODO: check valid time until
-	//TODO: response OK 
+	log.Info("time valid %s", cpdb.ValidFrom)
+
+	//TODO: check valid status
+	if cpdb.Status != activeSTATUS {
+		log.Info("coupon da bi disable")
+
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseCodeInvalid,
+			Description: lib.ResponseCodeInvalid.String(),
+		}
+		c.ServeJSON()
+		return
+	}
+	//TODO: check valid username
+	if cp.Username != cpdb.Username {
+		log.Info("coupon khong danh cho ban")
+
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseCodeInvalid,
+			Description: lib.ResponseCodeInvalid.String(),
+		}
+		c.ServeJSON()
+		return
+	}
+	//TODO: check valid categories
+	cates := strings.Split(cpdb.Categories, ",")
+	if cpdb.Categories != "" && !utils.StringInSlice(cp.Categories, cates) {
+		log.Info("coupon khong trong cates nay")
+
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseCodeInvalid,
+			Description: lib.ResponseCodeInvalid.String(),
+		}
+		c.ServeJSON()
+		return
+	}
+	//TODO: check valid products
+
+	products := strings.Split(cpdb.Products, ",")
+	if cpdb.Products != "" && !utils.StringInSlice(cp.Products, products) {
+		log.Info("coupon khong ap dung cho san pham nay")
+
+		c.Data["json"] = lib.Response{
+			Error:       lib.ResponseCodeInvalid,
+			Description: lib.ResponseCodeInvalid.String(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	//TODO: response OK
+	c.Data["json"] = lib.Response{
+		Error:       lib.ResponseOK,
+		Description: lib.ResponseOK.String(),
+	}
+	cpdb.CouponRedemptionsCount++
+	cpdb.Update("coupon_redemptions_count")
 	// inc Coupon.CouponRedemptionsCount by 1
 }
 
@@ -142,7 +232,7 @@ func (c *CouponsController) GetOne() {
 		c.Data["json"] = lib.Response{
 			Error:       lib.ResponseOK,
 			Description: lib.ResponseOK.String(),
-			Data: v,
+			Data:        v,
 		}
 	}
 	c.ServeJSON()
@@ -220,12 +310,11 @@ func (c *CouponsController) GetAll() {
 		c.Data["json"] = lib.Response{
 			Error:       lib.ResponseOK,
 			Description: lib.ResponseOK.String(),
-			Data: l,
+			Data:        l,
 		}
 	}
 	c.ServeJSON()
 }
-
 
 //PrepareUpdate check conditition for update
 func PrepareUpdate(code string) (v models.Coupon, err error) {
@@ -268,7 +357,6 @@ func PrepareUpdate(code string) (v models.Coupon, err error) {
 	return v, nil
 }
 
-
 // Put ...
 // @Title Put
 // @Description update the Coupons
@@ -307,12 +395,11 @@ func (c *CouponsController) Put() {
 	}
 	v.Update("code")
 	c.Data["json"] = lib.Response{
-			Error:       lib.ResponseOK,
-			Description: lib.ResponseOK.String(),
+		Error:       lib.ResponseOK,
+		Description: lib.ResponseOK.String(),
 	}
 	c.ServeJSON()
 }
-
 
 // Delete ...
 // @Title Delete

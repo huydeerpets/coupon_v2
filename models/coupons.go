@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 )
@@ -64,6 +65,17 @@ func GetCouponsByID(id int) (v *Coupon, err error) {
 	o := orm.NewOrm()
 	v = &Coupon{ID: id}
 	if err = o.Read(v); err == nil {
+		return v, nil
+	}
+	return nil, err
+}
+
+// GetCouponsByCode retrieves Coupons by code. Returns error if
+// Id doesn't exist
+func GetCouponsByCode(code string) (v *Coupon, err error) {
+	o := orm.NewOrm()
+	v = &Coupon{Code: code}
+	if err = o.Read(v, "code"); err == nil {
 		return v, nil
 	}
 	return nil, err
