@@ -102,16 +102,16 @@ func (c *CouponsController) ChargeCoupon() {
 		c.ServeJSON()
 		return
 	}
-	data := make(map[string]interface{})
-	code := lib.GenerateCode(6)
-	data["code"] = code
-	c.Data["json"] = lib.Response{
-		Error:       lib.ResponseOK,
-		Description: lib.ResponseOK.String(),
-		Data:        data,
-	}
-	c.ServeJSON()
-
+	//TODO: check json code
+	//TODO: check code exist in Database
+	//TODO: check valid count limit
+	//TODO: check valid status
+	//TODO: check valid username
+	//TODO: check valid categories
+	//TODO: check valid products
+	//TODO: check valid time until
+	//TODO: response OK 
+	// inc Coupon.CouponRedemptionsCount by 1
 }
 
 // GetOne ...
@@ -226,6 +226,49 @@ func (c *CouponsController) GetAll() {
 	c.ServeJSON()
 }
 
+
+//PrepareUpdate check conditition for update
+func PrepareUpdate(code string) (v models.Coupon, err error) {
+	cp := models.Coupon{Code: code}
+	err = cp.Read("code")
+	if err.Error() == "<QuerySeter> no row found" || err != nil {
+		return v, err
+	}
+	//check fields
+	if cp.Amount != 0 {
+		v.Amount = cp.Amount
+	}
+	if cp.ValidFrom.String() != "0001-01-01T00:00:00Z" {
+		v.ValidFrom = cp.ValidFrom
+	}
+	if cp.ValidUntil.String() != "0001-01-01T00:00:00Z" {
+		v.ValidUntil = cp.ValidUntil
+	}
+	if cp.Categories != "" {
+		v.Categories = cp.Categories
+	}
+	if cp.Description != "" {
+		v.Description = cp.Description
+	}
+	if cp.Products != "" {
+		v.Products = cp.Products
+	}
+	if cp.Username != "" {
+		v.Username = cp.Username
+	}
+	if cp.RedemptionLimit != 0 {
+		v.RedemptionLimit = cp.RedemptionLimit
+	}
+	if cp.Status != 0 {
+		v.Status = cp.Status
+	}
+	if cp.Type != 0 {
+		v.Type = cp.Type
+	}
+	return v, nil
+}
+
+
 // Put ...
 // @Title Put
 // @Description update the Coupons
@@ -253,7 +296,7 @@ func (c *CouponsController) Put() {
 		c.ServeJSON()
 		return
 	}
-	err = cp.Read("code")
+	v, err := PrepareUpdate(cp.Code)
 	if err.Error() == "<QuerySeter> no row found" || err != nil {
 		c.Data["json"] = lib.Response{
 			Error:       lib.ResponseDatabaseNotFoundCoupon,
@@ -262,15 +305,14 @@ func (c *CouponsController) Put() {
 		c.ServeJSON()
 		return
 	}
-	v := models.Coupon{Code: cp.Code}
-
-	//check fields
-	if cp.Amount != 0 {
-		v.Amount = cp.Amount
+	v.Update("code")
+	c.Data["json"] = lib.Response{
+			Error:       lib.ResponseOK,
+			Description: lib.ResponseOK.String(),
 	}
-	if cp.ValidFrom == 
 	c.ServeJSON()
 }
+
 
 // Delete ...
 // @Title Delete
